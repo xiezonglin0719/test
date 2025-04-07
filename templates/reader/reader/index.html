@@ -1,0 +1,119 @@
+{% extends 'reader/base.html' %}
+{% block card_header %}
+<span><a href="/reader/index"> 脑电信号实时显示 </a></span>
+{% endblock %}
+{% block card_body %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>EEG Multi-Channel (Clickable Labels, 1 mm = 100 µA)</title>
+  <style>
+    body {
+      font-family: sans-serif;
+    }
+    #info {
+      margin-bottom: 10px;
+    }
+    #startButton {
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: green;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>EEG - One Canvas, Each Channel as a Row</h1>
+  <button id="startButton">启动实时采集</button>
+  <div id="info">等待用户启动采集...</div>
+  <canvas id="eegCanvas" width="1200" height="2000"></canvas>
+
+  <script>
+    const nChannels = 64;
+    const SAMPLES_PER_SECOND = 1000;
+    const SECONDS_TO_DISPLAY = 10;
+    const TOTAL_POINTS = SAMPLES_PER_SECOND * SECONDS_TO_DISPLAY;
+    const electrodeNames = [
+      "Fpz", "Fp1", "Fp2", "AF3", "AF4", "AF7", "AF8", "Fz", "F1", "F2", "F3", "F4",
+      "F5", "F6", "F7", "F8", "FCz", "FC1", "FC2", "FC3", "FC4", "FC5", "FC6", "FT7",
+      "FT8", "Cz", "C1", "C2", "C3", "C4", "C5", "C6", "T7", "T8", "CP1", "CP2",
+      "CP3", "CP4", "CP5", "CP6", "TP7", "TP8", "Pz", "P3", "P4", "P5", "P6", "P7",
+      "P8", "POz", "PO3", "PO4", "PO5", "PO6", "PO7", "PO8", "Oz", "O1", "O2", "ECG",
+      "HEOR", "HEOL", "VEOU", "VEOL"
+    ];
+
+    let channelsData = Array.from({ length: nChannels }, () => new Array(TOTAL_POINTS).fill(0));
+    const canvas = document.getElementById('eegCanvas');
+    const ctx = canvas.getContext('2d');
+    const infoDiv = document.getElementById('info');
+    let socket = null;
+
+    function drawAllChannels() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const rowHeight = canvas.height / nChannels;
+      ctx.font = "14px sans-serif";
+      ctx.fillStyle = "black";
+
+      for (let c = 0; c < nChannels; c++) {
+        const offsetY = c * rowHeight + rowHeight / 2;
+
+        // 绘制通道名称
+        const label = electrodeNames[c] || `Ch ${c}`;
+        ctx.fillText(label, 5, c * rowHeight + 15);
+
+        ctx.strokeStyle = "blue";
+        ctx.beginPath();
+        for (let i = 0; i < TOTAL_POINTS; i++) {
+          const x = i / (TOTAL_POINTS - 1) * canvas.width;
+          const y = offsetY - channelsData[c][i] * 0.0378;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+      ctx.fillStyle = "red";
+      ctx.fillText("Scale: 1 mm = 100 µA", canvas.width - 180, 20);
+    }
+
+    function updateChannelsData(newData) {
+      for (let c = 0; c < nChannels; c++) {
+        channelsData[c] = channelsData[c].concat(newData[c]);
+        channelsData[c].splice(0, 1000);
+      }
+      drawAllChannels();
+    }
+
+    function startRealTimeCollection() {
+      if (socket) {
+        alert("数据已经在采集中！");
+        return;
+      }
+      socket = new WebSocket('ws://localhost:8765');
+      socket.onopen = () => {
+        infoDiv.textContent = "WebSocket 已连接，开始接收数据...";
+      };
+      socket.onmessage = (event) => {
+        const received = JSON.parse(event.data);
+        if (received.channels && received.channels.length === nChannels) {
+          updateChannelsData(received.channels);
+        }
+      };
+      socket.onclose = () => {
+        infoDiv.textContent = "WebSocket 连接已断开";
+        socket = null;
+      };
+      socket.onerror = (err) => {
+        infoDiv.textContent = "WebSocket 出错: " + err;
+        socket = null;
+      };
+    }
+
+    document.getElementById('startButton').addEventListener('click', startRealTimeCollection);
+  </script>
+</body>
+</html>
+{% endblock %}

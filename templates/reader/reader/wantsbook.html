@@ -1,0 +1,162 @@
+{% extends 'reader/base.html' %}
+
+{% block card_header %}
+<nav class="text-sm breadcrumbs">
+    <ul class="p-0 m-0">
+        <li>疲劳评估</li>
+        <li class="text-gray-500">疲劳数据</li>
+    </ul>
+</nav>
+{% endblock %}
+
+{% block card_body %}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>疲劳诊断结果</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen p-4">
+    <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-sm overflow-hidden">
+        <div class="bg-gray-100 p-6 border-b border-gray-200">
+            <h1 class="text-3xl font-semibold text-gray-800">疲劳诊断系统</h1>
+            <p class="text-gray-600 mt-2">实时监测和评估您的疲劳状态</p >
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-700 mb-4">开始诊断</h2>
+                    <button id="start-diagnosis" class="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium py-3 px-4 rounded-md transition duration-300 ease-in-out border border-blue-200">
+                        开始疲劳诊断
+                    </button>
+                    <div class="mt-4 text-sm text-gray-600">
+                        点击按钮开始进行疲劳诊断。系统将分析您的生理数据，并在几秒钟内给出结果。
+                    </div>
+                </div>
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-700 mb-4">诊断结果</h2>
+                    <div id="fatigue-result" class="bg-gray-50 p-6 rounded-md text-center text-xl font-medium text-gray-700 min-h-[150px] flex items-center justify-center border border-gray-200">
+                        <span class="text-gray-500">等待诊断...</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8">
+                <h2 class="text-xl font-semibold text-gray-700 mb-4">疲劳程度说明</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-green-50 p-4 rounded-md border border-green-200">
+                        <h3 class="font-medium text-green-700">无疲劳或轻度疲劳</h3>
+                        <p class="text-sm text-green-600 mt-2">您的精神状态良好，可以继续工作或学习。</p >
+                    </div>
+                    <div class="bg-yellow-50 p-4 rounded-md border border-yellow-200">
+                        <h3 class="font-medium text-yellow-700">中度疲劳</h3>
+                        <p class="text-sm text-yellow-600 mt-2">建议适当休息，避免长时间持续工作。</p >
+                    </div>
+                    <div class="bg-red-50 p-4 rounded-md border border-red-200">
+                        <h3 class="font-medium text-red-700">重度疲劳</h3>
+                        <p class="text-sm text-red-600 mt-2">请立即停止工作或学习，充分休息恢复。</p >
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8">
+                <h2 class="text-xl font-semibold text-gray-700 mb-4">健康建议</h2>
+                <ul class="list-disc list-inside text-gray-600 space-y-2">
+                    <li>保持规律的作息时间，确保充足的睡眠。</li>
+                    <li>工作或学习时，每隔45-60分钟休息5-10分钟。</li>
+                    <li>保持良好的坐姿，避免长时间保持同一姿势。</li>
+                    <li>多喝水，保持身体水分充足。</li>
+                    <li>定时活动，做适量的伸展运动。</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            var diagnosisInterval;
+
+            $('#start-diagnosis').on('click', function() {
+                $(this).prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
+                $('#fatigue-result').html('<div class="text-lg text-blue-600">正在评估中，请稍候...</div>');
+
+                $.ajax({
+                    url: '/start_fatigue_prediction',
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(response) {
+                        console.log(response.message);
+                        diagnosisInterval = setInterval(updateFatigueResult, 2000);
+                    },
+                    error: function() {
+                        $('#fatigue-result').html('<div class="text-red-500 text-lg">启动疲劳诊断出错</div><button id="retry-btn" class="mt-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-md transition duration-200">重试</button>');
+                        resetDiagnosisState();
+                    }
+                });
+            });
+
+            function updateFatigueResult() {
+                $.ajax({
+                    url: '/get_fatigue_prediction',
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(data) {
+                        var result = data.result;
+                        var fatigueDescription, colorClass, bgClass;
+
+                        if (result === 0) {
+                            fatigueDescription = '无疲劳或轻度疲劳';
+                            colorClass = 'text-green-700';
+                            bgClass = 'bg-green-50';
+                        } else if (result === 1) {
+                            fatigueDescription = '中度疲劳';
+                            colorClass = 'text-yellow-700';
+                            bgClass = 'bg-yellow-50';
+                        } else if (result === 2) {
+                            fatigueDescription = '重度疲劳';
+                            colorClass = 'text-red-700';
+                            bgClass = 'bg-red-50';
+                        } else {
+                            fatigueDescription = '未知结果';
+                            colorClass = 'text-gray-700';
+                            bgClass = 'bg-gray-50';
+                        }
+
+                        $('#fatigue-result').removeClass('bg-gray-50 bg-green-50 bg-yellow-50 bg-red-50').addClass(bgClass).html(`
+                            <div>
+                                <div class="${colorClass} text-2xl font-semibold mb-2">当前疲劳诊断结果</div>
+                                <div class="${colorClass} text-3xl font-bold">${fatigueDescription}</div>
+                            </div>
+                        `);
+
+                        resetDiagnosisState();
+                    },
+                    error: function() {
+                        $('#fatigue-result').html('<div class="text-red-500 text-lg">获取数据出错</div><button id="retry-btn" class="mt-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-md transition duration-200">重试</button>');
+                        resetDiagnosisState();
+                    }
+                });
+            }
+
+            function resetDiagnosisState() {
+                $('#start-diagnosis').prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
+            }
+
+            $(document).on('click', '#retry-btn', function() {
+                $('#fatigue-result').html('<div class="text-lg text-blue-600">重新评估中，请稍候...</div>');
+                updateFatigueResult();
+            });
+        });
+    </script>
+</body>
+</html>
+{% endblock %}

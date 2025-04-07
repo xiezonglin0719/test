@@ -1,0 +1,330 @@
+{% extends 'reader/base.html' %}
+
+{% block card_header %}
+<span><a href="/reader/index"> 采样设置 </a></span>
+{% endblock %}
+
+
+{% block card_body %}
+    <!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>脑电疲劳监测与评估系统</title>
+    <style>
+        /* Base styles */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+        }
+
+        .min-h-screen {
+            min-height: 100vh;
+        }
+
+        .bg-background {
+            background-color: #ffffff;
+        }
+
+        .p-4 {
+            padding: 1rem;
+        }
+
+        .grid {
+            display: grid;
+            {#height: 100vh;#}
+        }
+
+        .grid-cols-12 {
+            grid-template-columns: repeat(12, minmax(0, 1fr));
+        }
+
+        .gap-4 {
+            gap: 1rem;
+        }
+
+        .col-span-9 {
+            grid-column: span 9 / span 9;
+        }
+
+        .col-span-3 {
+            grid-column: span 3 / span 3;
+        }
+
+        .h-full {
+            height: 100%;
+        }
+
+        /* Card styles */
+        .card {
+            background-color: #ffffff;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }
+
+        .card-header {
+            padding: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .card-content {
+            padding: 1rem;
+        }
+
+        /* Form styles */
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        input[type="number"],
+        input[type="range"],
+        select {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.25rem;
+        }
+
+        input[type="checkbox"] {
+            margin-right: 0.5rem;
+        }
+
+        /* Utility classes */
+        .space-y-4 > * + * {
+            margin-top: 1rem;
+        }
+
+        .space-y-2 > * + * {
+            margin-top: 0.5rem;
+        }
+
+        .flex {
+            display: flex;
+        }
+
+        .items-center {
+            align-items: center;
+        }
+
+        .justify-between {
+            justify-content: space-between;
+        }
+
+        .text-green-500 {
+            color: #10b981;
+        }
+
+        .bg-green-500 {
+            background-color: #10b981;
+        }
+
+        .text-sm {
+            font-size: 0.875rem;
+        }
+
+        .font-medium {
+            font-weight: 500;
+        }
+
+        .rounded-full {
+            border-radius: 9999px;
+        }
+
+        .overflow-hidden {
+            overflow: hidden;
+        }
+
+        .w-1\/3 {
+            width: 33.333333%;
+        }
+
+        .scroll-area {
+            overflow-y: auto;
+        }
+
+        /* Placeholder styles */
+        .bg-muted\/20 {
+            background-color: rgba(229, 231, 235, 0.2);
+        }
+
+        .rounded-lg {
+            border-radius: 0.5rem;
+        }
+
+        .border {
+            border: 1px solid #e5e7eb;
+        }
+
+        .p-4 {
+            padding: 1rem;
+        }
+
+        .h-\[300px\] {
+            height: 300px;
+        }
+
+        .flex {
+            display: flex;
+        }
+
+        .items-center {
+            align-items: center;
+        }
+
+        .justify-center {
+            justify-content: center;
+        }
+
+        .text-muted-foreground {
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+    <div class="min-h-screen bg-background p-4">
+        <div class="grid grid-cols-12 gap-4 h-[calc(100vh-2rem)]">
+            <!-- 左侧内容区域已删除，保留原来空白 -->
+            <div class="col-span-9">
+                <div style="width: 100%; height: 100%;">
+                  <img src="{{ url_for('static', filename='img/EGG64.png') }}" alt="64通道脑电信号" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+            </div>
+
+            <!-- 右侧信号设置，保持原来比例-->
+            <div class="col-span-3 h-full">
+                <div class="card h-full">
+                    <div class="card-header">
+                        <h2 class="card-title">采样设置</h2>
+                    </div>
+                    <div class="card-content">
+                        <div class="scroll-area h-[calc(100vh-10rem)] pr-4">
+                            <div class="space-y-4">
+                                <div class="space-y-2">
+                                    <label for="samplingRate">采样率 (Hz)</label>
+                                    <input type="number" id="samplingRate" value="250">
+                                </div>
+
+                                <div class="space-y-2">
+                                    <label>幅值范围 (μV)</label>
+                                    <div class="pt-2">
+                                        <input type="range" id="amplitudeRange" min="-500" max="500" step="10" value="0,100">
+                                        <div class="flex justify-between mt-1">
+                                            <span class="text-sm" id="amplitudeRangeMin">0</span>
+                                            <span class="text-sm" id="amplitudeRangeMax">100</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-2">
+                                    <div class="flex items-center justify-between">
+                                        <label for="notchFilter">陷波滤波器</label>
+                                        <input type="checkbox" id="notchFilter" checked>
+                                    </div>
+                                    <div id="notchFilterSettings" class="space-y-4 mt-2">
+                                        <div>
+                                            <label for="notchFrequency">陷波频率 (Hz)</label>
+                                            <select id="notchFrequency">
+                                                <option value="50">50 Hz</option>
+                                                <option value="60">60 Hz</option>
+                                                <option value="custom">自定义</option>
+                                            </select>
+                                            <input type="number" id="customNotchFrequency" placeholder="输入自定义频率" class="mt-2" style="display: none;">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-2">
+                                    <div class="flex items-center justify-between">
+                                        <label for="bandpass">带通滤波器</label>
+                                        <input type="checkbox" id="bandpass" checked>
+                                    </div>
+                                    <div id="bandpassSettings" class="space-y-4 mt-2">
+                                        <div>
+                                            <label for="lowCutoff">低截止频率 (Hz): <span id="lowCutoffValue">8</span></label>
+                                            <input type="range" id="lowCutoff" min="0" max="50" step="1" value="8">
+                                        </div>
+                                        <div>
+                                            <label for="highCutoff">高截止频率 (Hz): <span id="highCutoffValue">50</span></label>
+                                            <input type="range" id="highCutoff" min="0" max="100" step="1" value="50">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 采样率
+            const samplingRateInput = document.getElementById('samplingRate');
+            samplingRateInput.addEventListener('change', function() {
+                console.log('采样率已更改:', this.value);
+            });
+
+            // 幅值范围
+            const amplitudeRangeInput = document.getElementById('amplitudeRange');
+            const amplitudeRangeMin = document.getElementById('amplitudeRangeMin');
+            const amplitudeRangeMax = document.getElementById('amplitudeRangeMax');
+
+            amplitudeRangeInput.addEventListener('input', function() {
+                const [min, max] = this.value.split(',');
+                amplitudeRangeMin.textContent = min;
+                amplitudeRangeMax.textContent = max;
+                console.log('幅值范围已更改:', min, max);
+            });
+
+            // 陷波滤波器
+            const notchFilterCheckbox = document.getElementById('notchFilter');
+            const notchFilterSettings = document.getElementById('notchFilterSettings');
+            const notchFrequencySelect = document.getElementById('notchFrequency');
+            const customNotchFrequencyInput = document.getElementById('customNotchFrequency');
+
+            notchFilterCheckbox.addEventListener('change', function() {
+                notchFilterSettings.style.display = this.checked ? 'block' : 'none';
+            });
+
+            notchFrequencySelect.addEventListener('change', function() {
+                customNotchFrequencyInput.style.display = this.value === 'custom' ? 'block' : 'none';
+            });
+
+            // 带通滤波器
+            const bandpassCheckbox = document.getElementById('bandpass');
+            const bandpassSettings = document.getElementById('bandpassSettings');
+            const lowCutoffInput = document.getElementById('lowCutoff');
+            const highCutoffInput = document.getElementById('highCutoff');
+            const lowCutoffValue = document.getElementById('lowCutoffValue');
+            const highCutoffValue = document.getElementById('highCutoffValue');
+
+            bandpassCheckbox.addEventListener('change', function() {
+                bandpassSettings.style.display = this.checked ? 'block' : 'none';
+            });
+
+            lowCutoffInput.addEventListener('input', function() {
+                lowCutoffValue.textContent = this.value;
+                console.log('低截止频率已更改:', this.value);
+            });
+
+            highCutoffInput.addEventListener('input', function() {
+                highCutoffValue.textContent = this.value;
+                console.log('高截止频率已更改:', this.value);
+            });
+        });
+    </script>
+</body>
+</html>
+
+{% endblock %}

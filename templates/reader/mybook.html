@@ -1,0 +1,356 @@
+{% extends 'reader/base.html' %}
+
+{% block card_header %}
+<span><a href="/reader/index"> 脑电信号实时显示 </a></span>
+{% endblock %}
+
+{% block card_body %}
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>脑电疲劳监测与评估系统</title>
+    <!-- 引入 Chart.js 库 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Base styles */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+        }
+
+        .min-h-screen {
+            min-height: 100vh;
+        }
+
+        .bg-background {
+            background-color: #ffffff;
+        }
+
+        .p-4 {
+            padding: 1rem;
+        }
+
+        .grid {
+            display: grid;
+        }
+
+        .grid-cols-1 {
+            grid-template-columns: 1fr;
+        }
+
+        .gap-4 {
+            gap: 1rem;
+        }
+
+        .grid-rows-[auto_1fr] {
+            grid-template-rows: auto 1fr;
+        }
+
+        .h-full {
+            height: 100%;
+        }
+
+        /* Card styles */
+        .card {
+            background-color: #ffffff;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+        }
+
+        .card-header {
+            padding: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .card-content {
+            padding: 1rem;
+        }
+
+        /* Table styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        td {
+            padding: 0.5rem;
+            border: 1px solid #e5e7eb;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        /* Placeholder styles */
+        .bg-muted\/20 {
+            background-color: rgba(229, 231, 235, 0.2);
+        }
+
+        .rounded-lg {
+            border-radius: 0.5rem;
+        }
+
+        .border {
+            border: 1px solid #e5e7eb;
+        }
+
+        .p-4 {
+            padding: 1rem;
+        }
+
+        .h-\[300px\] {
+            height: 300px;
+        }
+
+        .flex {
+            display: flex;
+        }
+
+        .items-center {
+            align-items: center;
+        }
+
+        .justify-center {
+            justify-content: center;
+        }
+
+        .text-muted-foreground {
+            color: #6b7280;
+        }
+
+        .flex-row {
+            display: flex;
+            flex-direction: row;
+            gap: 1rem;
+        }
+
+        .flex-1 {
+            flex: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="min-h-screen bg-background p-4">
+        <div class="grid grid-cols-1 gap-4 h-[calc(100vh-2rem)]">
+            <!-- 频率功率分布 -->
+            <div class="card w-full">
+                <div class="card-header">
+                    <h2 class="card-title">频率功率分布</h2>
+                </div>
+                <div class="card-content">
+                    <table id="bandRatiosTable">
+                        <tbody>
+                            <tr>
+                                <td>功率峰值</td>
+                                <td class="text-right" id="powerPeak">8.19dB</td>
+                                <td>α/β</td>
+                                <td class="text-right" id="alphaOverBeta">无数据</td>
+                                <td>θ/β</td>
+                                <td class="text-right" id="thetaOverBeta">无数据</td>
+                                <td>(α + θ)/β</td>
+                                <td class="text-right" id="alphaThetaOverBeta">无数据</td>
+                            </tr>
+                            <tr>
+                                <td>(α + θ)/(α + β)</td>
+                                <td class="text-right" id="alphaThetaOverAlphaBeta">无数据</td>
+                                <td>θ/(α + β)</td>
+                                <td class="text-right" id="thetaOverAlphaBeta">无数据</td>
+                                <td>SMR</td>
+                                <td class="text-right" id="smr">8.62dB</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 左右排版的内容 -->
+            <div class="flex-row">
+                <!-- 脑地形图 -->
+                <div class="card flex-1">
+                    <div class="card-header">
+                        <h2 class="card-title">脑地形图</h2>
+                    </div>
+                    <div class="card-content">
+                        <div class="h-[300px] bg-muted/20 rounded-lg border">
+                            <div class="p-4 h-full flex items-center justify-center text-muted-foreground">
+                                脑地形图
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 实时频谱分析 -->
+                <div class="card flex-1">
+                    <div class="card-header">
+                        <h2 class="card-title">实时频谱分析</h2>
+                    </div>
+                    <div class="card-content">
+                        <!-- 用于绘制折线图的 canvas 元素 -->
+                        <canvas id="spectrumChart"></canvas>
+                    </div>
+                    <!-- 添加按钮 -->
+                    <div class="card-footer">
+                        <button id="startWaveformBtn" onclick="startWaveform()">开始展示波形图</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 开始波形数据获取
+        function startWaveform() {
+            fetch('/start_waveform')
+              .then(response => response.json())
+              .then(data => {
+                    console.log(data.message);
+                    // 启动接收频谱数据的函数
+                    startReceivingSpectrumData();
+                })
+              .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+
+        // 每秒接收一次频谱数据
+        function startReceivingSpectrumData() {
+            const intervalId = setInterval(() => {
+                fetch('/send_spectrum_data')
+                  .then(response => response.json())
+                  .then(data => {
+                        console.log(data.message);
+                        if ('alphaData' in data && 'deltaData' in data && 'thetaData' in data && 'betaData' in data) {
+                            // 更新频谱图
+                            updateSpectrumChart(data.alphaData, data.deltaData, data.thetaData, data.betaData);
+                        } else {
+                            console.error('Invalid spectrum data received from the server.');
+                        }
+                    })
+                  .catch(error => {
+                        console.error('Error receiving spectrum data:', error);
+                        // 出错时停止间隔请求
+                        clearInterval(intervalId);
+                    });
+            }, 1000);
+        }
+
+        // 初始化频谱图
+        const ctx = document.getElementById('spectrumChart').getContext('2d');
+        const spectrumChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    {
+                        label: 'Alpha 频段',
+                        data: [],
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        fill: false,
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Delta 频段',
+                        data: [],
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        fill: false,
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Theta 频段',
+                        data: [],
+                        borderColor: 'rgba(255, 205, 86, 1)',
+                        backgroundColor: 'rgba(255, 205, 86, 0.2)',
+                        fill: false,
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Beta 频段',
+                        data: [],
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        fill: false,
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: '时间'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: '数值'
+                        }
+                    }
+                }
+            }
+        });
+
+        // 更新频谱图数据
+        function updateSpectrumChart(alphaData, deltaData, thetaData, betaData) {
+            const now = new Date().toLocaleTimeString();
+            spectrumChart.data.labels.push(now);
+            spectrumChart.data.datasets[0].data.push(alphaData);
+            spectrumChart.data.datasets[1].data.push(deltaData);
+            spectrumChart.data.datasets[2].data.push(thetaData);
+            spectrumChart.data.datasets[3].data.push(betaData);
+            // 限制数据点数量，避免过多数据导致性能问题
+            if (spectrumChart.data.labels.length > 20) {
+                spectrumChart.data.labels.shift();
+                spectrumChart.data.datasets.forEach(dataset => {
+                    dataset.data.shift();
+                });
+            }
+            spectrumChart.update();
+        }
+
+        //新加入
+        function updateEEGData() {
+         fetch("http://127.0.0.1:5000/api/eeg")  // 替换为你的后端API地址
+        .then(response => response.json())  // 解析JSON数据
+        .then(data => {
+            // 更新各个 EEG 频段比值
+            document.getElementById("alphaOverBeta").innerText = data["alpha/beta"].toFixed(2);
+            document.getElementById("thetaOverBeta").innerText = data["theta/beta"].toFixed(2);
+            document.getElementById("alphaThetaOverBeta").innerText = data["(alpha+theta)/beta"].toFixed(2);
+            document.getElementById("alphaThetaOverAlphaBeta").innerText = data["(alpha+theta)/(alpha+beta)"].toFixed(2);
+            document.getElementById("thetaOverAlphaBeta").innerText = data["theta/(alpha+beta)"].toFixed(2);
+
+            console.log("EEG data updated:", data);
+        })
+        .catch(error => console.error("Error fetching EEG data:", error));
+}
+
+// 每秒更新一次
+setInterval(updateEEGData, 1000);
+
+
+
+
+    </script>
+</body>
+
+</html>
+
+{% endblock %}

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>欢迎注册</title>
+    <link rel="stylesheet" href="../static/layui/css/layui.css">
+    <link rel="stylesheet" href="../static/static/css/style.css">
+    <link rel="icon" href="../static/img/favicon.ico" type="image/x-icon">
+</head>
+<body style="background-image: url('../static/img/bg2.jpg');background-size: 100%">
+
+<div class="layui-layout-body">
+    <div class="register-main">
+        <header class="layui-elip">用户注册</header>
+        <form class="layui-form" method="post">
+            {{ form.csrf_token }}
+            <div class="layui-form-item">
+                <label class="layui-form-label">用户名：</label>
+                <div class="layui-input-inline">
+                    {{ form.username(class="layui-input", placeholder="用户名", autocomplete="off", id="uname") }}
+                </div>
+            </div>
+            <div class="layui-form-item">
+                {{ form.submit(class="layui-btn") }}
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="../static/layui/layui.js"></script>
+<script>
+    layui.use(['layer'], function(){
+        var layer = layui.layer;
+        {% for message in get_flashed_messages() %}
+            layer.msg('{{ message }}');
+        {% endfor %}
+    });
+</script>
+</body>
+</html>
